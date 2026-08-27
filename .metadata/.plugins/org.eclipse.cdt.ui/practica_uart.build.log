@@ -1,0 +1,23 @@
+18:12:04 **** Build of configuration Debug for project practica_uart ****
+make -r -j16 all 
+Building file: ../source/practica_uart.c
+Invoking: MCU C Compiler
+arm-none-eabi-gcc -D__REDLIB__ -DCPU_MKL25Z128VLK4 -DCPU_MKL25Z128VLK4_cm0plus -DSDK_OS_BAREMETAL -DFSL_RTOS_BM -DSDK_DEBUGCONSOLE=1 -DCR_INTEGER_PRINTF -DPRINTF_FLOAT_ENABLE=0 -D__MCUXPRESSO -D__USE_CMSIS -DDEBUG -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/practica_uart/board" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/practica_uart/source" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/practica_uart" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/practica_uart/drivers" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/practica_uart/startup" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/practica_uart/utilities" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/practica_uart/CMSIS" -O0 -fno-common -g3 -gdwarf-4 -Wall -c -fmessage-length=0 -fno-builtin -ffunction-sections -fdata-sections -fmerge-constants -fmacro-prefix-map="../source/"= -mcpu=cortex-m0plus -mthumb -D__REDLIB__ -fstack-usage -specs=redlib.specs -MMD -MP -MF"source/practica_uart.d" -MT"source/practica_uart.o" -MT"source/practica_uart.d" -o "source/practica_uart.o" "../source/practica_uart.c"
+Finished building: ../source/practica_uart.c
+ 
+Building target: practica_uart.axf
+Invoking: MCU Linker
+arm-none-eabi-gcc -nostdlib -Xlinker -Map="practica_uart.map" -Xlinker --gc-sections -Xlinker -print-memory-usage -Xlinker --sort-section=alignment -Xlinker --cref -mcpu=cortex-m0plus -mthumb -T practica_uart_Debug.ld -o "practica_uart.axf" ./utilities/fsl_debug_console.o  ./startup/startup_mkl25z4.o  ./source/mtb.o ./source/practica_uart.o ./source/semihost_hardfault.o  ./drivers/fsl_clock.o ./drivers/fsl_common.o ./drivers/fsl_flash.o ./drivers/fsl_gpio.o ./drivers/fsl_lpsci.o ./drivers/fsl_smc.o ./drivers/fsl_uart.o  ./board/board.o ./board/clock_config.o ./board/peripherals.o ./board/pin_mux.o  ./CMSIS/system_MKL25Z4.o   
+Memory region         Used Size  Region Size  %age Used
+   PROGRAM_FLASH:        6424 B       128 KB      4.90%
+            SRAM:        2384 B        16 KB     14.55%
+Finished building target: practica_uart.axf
+ 
+Performing post-build steps
+arm-none-eabi-size "practica_uart.axf"; # arm-none-eabi-objcopy -v -O binary "practica_uart.axf" "practica_uart.bin" ; # checksum -p MKL25Z128xxx4 -d "practica_uart.bin";
+   text	   data	    bss	    dec	    hex	filename
+   6424	      0	   2384	   8808	   2268	practica_uart.axf
+ 
+
+18:12:05 Build Finished. 0 errors, 0 warnings. (took 846ms)
+

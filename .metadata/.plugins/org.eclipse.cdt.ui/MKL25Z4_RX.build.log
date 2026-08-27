@@ -1,0 +1,23 @@
+18:02:51 **** Build of configuration Debug for project MKL25Z4_RX ****
+make -r -j16 all 
+Building file: ../source/MKL25Z4_RX.c
+Invoking: MCU C Compiler
+arm-none-eabi-gcc -D__REDLIB__ -DCPU_MKL25Z128VLK4 -DCPU_MKL25Z128VLK4_cm0plus -DSDK_OS_BAREMETAL -DFSL_RTOS_BM -DSDK_DEBUGCONSOLE=1 -DCR_INTEGER_PRINTF -DPRINTF_FLOAT_ENABLE=0 -D__MCUXPRESSO -D__USE_CMSIS -DDEBUG -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/MKL25Z4_RX/board" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/MKL25Z4_RX/source" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/MKL25Z4_RX" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/MKL25Z4_RX/drivers" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/MKL25Z4_RX/startup" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/MKL25Z4_RX/utilities" -I"/home/sesgaro/Documents/MCUXpresso_25.6.136/workspace/MKL25Z4_RX/CMSIS" -O0 -fno-common -g3 -gdwarf-4 -Wall -c -fmessage-length=0 -fno-builtin -ffunction-sections -fdata-sections -fmerge-constants -fmacro-prefix-map="../source/"= -mcpu=cortex-m0plus -mthumb -D__REDLIB__ -fstack-usage -specs=redlib.specs -MMD -MP -MF"source/MKL25Z4_RX.d" -MT"source/MKL25Z4_RX.o" -MT"source/MKL25Z4_RX.d" -o "source/MKL25Z4_RX.o" "../source/MKL25Z4_RX.c"
+Finished building: ../source/MKL25Z4_RX.c
+ 
+Building target: MKL25Z4_RX.axf
+Invoking: MCU Linker
+arm-none-eabi-gcc -nostdlib -Xlinker -Map="MKL25Z4_RX.map" -Xlinker --gc-sections -Xlinker -print-memory-usage -Xlinker --sort-section=alignment -Xlinker --cref -mcpu=cortex-m0plus -mthumb -T MKL25Z4_RX_Debug.ld -o "MKL25Z4_RX.axf" ./utilities/fsl_debug_console.o  ./startup/startup_mkl25z4.o  ./source/MKL25Z4_RX.o ./source/mtb.o ./source/semihost_hardfault.o  ./drivers/fsl_clock.o ./drivers/fsl_common.o ./drivers/fsl_flash.o ./drivers/fsl_gpio.o ./drivers/fsl_lpsci.o ./drivers/fsl_smc.o ./drivers/fsl_uart.o  ./board/board.o ./board/clock_config.o ./board/peripherals.o ./board/pin_mux.o  ./CMSIS/system_MKL25Z4.o   
+Memory region         Used Size  Region Size  %age Used
+   PROGRAM_FLASH:        3076 B       128 KB      2.35%
+            SRAM:        2384 B        16 KB     14.55%
+Finished building target: MKL25Z4_RX.axf
+ 
+Performing post-build steps
+arm-none-eabi-size "MKL25Z4_RX.axf"; # arm-none-eabi-objcopy -v -O binary "MKL25Z4_RX.axf" "MKL25Z4_RX.bin" ; # checksum -p MKL25Z128xxx4 -d "MKL25Z4_RX.bin";
+   text	   data	    bss	    dec	    hex	filename
+   3076	      0	   2384	   5460	   1554	MKL25Z4_RX.axf
+ 
+
+18:02:51 Build Finished. 0 errors, 0 warnings. (took 893ms)
+
