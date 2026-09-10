@@ -1,0 +1,3 @@
+../source/Practica 2_SPI.c:18:5:main	8	static
+../source/Practica 2_SPI.c:37:6:SPI0_init	8	static
+../source/Practica 2_SPI.c:53:6:max7219_write	24	static

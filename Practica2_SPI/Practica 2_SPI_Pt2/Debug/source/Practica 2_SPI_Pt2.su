@@ -1,0 +1,6 @@
+../source/Practica 2_SPI_Pt2.c:15:5:main	40	static
+../source/Practica 2_SPI_Pt2.c:84:6:SPI0_init	8	static
+../source/Practica 2_SPI_Pt2.c:99:6:buttons_init	8	static
+../source/Practica 2_SPI_Pt2.c:111:6:max7219_write	24	static
+../source/Practica 2_SPI_Pt2.c:128:6:display_update	32	static
+../source/Practica 2_SPI_Pt2.c:140:6:delay_ms	24	static
