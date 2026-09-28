@@ -1,0 +1,271 @@
+#include <MKL25Z4.h>
+#include <stdint.h>
+
+#include "I2C.h"
+#include "INA3221.h"
+#include "RTC.h"
+
+const unsigned int CLK_HZ = 20970000;
+
+#define CANAL_INA   3
+
+static const RTC_Time_t HORA_POR_DEFECTO = {
+    0, 0, 12,       	// segundos, minutos, horas
+    7,           	// dia (lunes, martes, etc)
+    27, 9, 2026  	// dia, mes, ano
+};
+
+static const char *const DIA[8] = {
+    "---", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"
+};
+
+static void UART0_init(void);
+static void UART0_putc(char c);
+static void UART0_puts(const char *str);
+static void UART0_putn(unsigned int n);
+static void UART0_putd(int32_t v);
+static void UART0_puthex16(uint16_t v);
+static void UART0_pad(int ancho, int usados);
+static void delayMs(int n);
+
+
+static void UART0_init(void)
+{
+    SIM->SCGC4 |= 0x0400;
+    SIM->SOPT2  = (SIM->SOPT2 & ~0x0C000000u) | 0x04000000u;
+
+    UART0->C2 = 0x00;
+
+    UART0->C4  = 0x0D;
+    UART0->BDH = 0x00;
+    UART0->BDL = 0x0D;
+
+    UART0->C1 = 0x00;
+    UART0->C2 = 0x0C;
+
+    SIM->SCGC5   |= 0x0200;
+    PORTA->PCR[2] = 0x0200;
+    PORTA->PCR[1] = 0x0200;
+
+    UART0->S1 = 0x1F;
+    (void)UART0->D;
+}
+
+static void UART0_putc(char c)
+{
+    while (!(UART0->S1 & 0x80)) { }
+    UART0->D = (uint8_t)c;
+}
+
+static void UART0_puts(const char *str)
+{
+    while (*str != '\0') {
+        if (*str == '\n') {
+            UART0_putc('\r');
+        }
+        UART0_putc(*str);
+        str++;
+    }
+}
+
+static void UART0_putn(unsigned int n)
+{
+    char buf[11];
+    int i = 0;
+
+    if (n == 0) {
+        UART0_putc('0');
+        return;
+    }
+    while (n > 0) {
+        buf[i++] = (char)('0' + (n % 10));
+        n /= 10;
+    }
+    while (i > 0) {
+        UART0_putc(buf[--i]);
+    }
+}
+
+static void UART0_putd(int32_t v)
+{
+    if (v < 0) {
+        UART0_putc('-');
+        v = -v;
+    }
+    UART0_putn((unsigned int)v);
+}
+
+static void UART0_puthex16(uint16_t v)
+{
+    static const char hex[16] = "0123456789ABCDEF";
+    int i;
+
+    UART0_puts("0x");
+    for (i = 12; i >= 0; i -= 4) {
+        UART0_putc(hex[(v >> i) & 0x0Fu]);
+    }
+}
+
+static void UART0_pad(int ancho, int usados)
+{
+    while (usados < ancho) {
+        UART0_putc(' ');
+        usados++;
+    }
+}
+
+static int anchoDe(int32_t v)
+{
+    int n = (v < 0) ? 1 : 0;
+
+    if (v < 0) v = -v;
+    do {
+        n++;
+        v /= 10;
+    } while (v > 0);
+    return n;
+}
+
+static void delayMs(int n)
+{
+    int i;
+
+    SysTick->LOAD = (CLK_HZ / 1000u) - 1u;
+    SysTick->CTRL = 0x5;
+    for (i = 0; i < n; i++) {
+        while ((SysTick->CTRL & 0x10000) == 0) { }
+    }
+    SysTick->CTRL = 0;
+}
+
+
+static void imprimir2d(uint8_t v)
+{
+    UART0_putc((char)('0' + (v / 10u)));
+    UART0_putc((char)('0' + (v % 10u)));
+}
+
+static void imprimirTemp(int16_t c100)
+{
+    int16_t ent, frac;
+
+    if (c100 < 0) {
+        UART0_putc('-');
+        c100 = (int16_t)(-c100);
+    }
+    ent  = (int16_t)(c100 / 100);
+    frac = (int16_t)(c100 % 100);
+
+    UART0_putn((unsigned int)ent);
+    UART0_putc('.');
+    imprimir2d((uint8_t)frac);
+    UART0_puts(" C");
+}
+
+static void imprimirHora(const RTC_Time_t *t)
+{
+    UART0_putn(t->year);
+    UART0_putc('-');
+    imprimir2d(t->month);
+    UART0_putc('-');
+    imprimir2d(t->day);
+    UART0_puts(" (");
+    UART0_puts(DIA[(t->weekday <= 7u) ? t->weekday : 0u]);
+    UART0_puts(") ");
+    imprimir2d(t->hours);
+    UART0_putc(':');
+    imprimir2d(t->minutes);
+    UART0_putc(':');
+    imprimir2d(t->seconds);
+}
+
+static void imprimirCabecera(void)
+{
+    UART0_puts("\n");
+    UART0_puts("CH    Vbus(mV)   Vshunt(uV)    I(mA)\n");
+    UART0_puts("-------------------------------------\n");
+}
+
+static void imprimirCanal(uint8_t ch, const INA_Data_t *d)
+{
+    UART0_putn(ch);
+
+    UART0_pad(12, anchoDe(d->bus_mV));
+    UART0_putd(d->bus_mV);
+
+    UART0_pad(13, anchoDe(d->shunt_uV));
+    UART0_putd(d->shunt_uV);
+
+    UART0_pad(9, anchoDe(d->current_mA));
+    UART0_putd(d->current_mA);
+
+    UART0_puts("\n");
+}
+
+int main(void)
+{
+    INA_Data_t canal;
+    RTC_Time_t hora;
+    int16_t temp;
+
+    UART0_init();
+    I2C1_init();
+
+    delayMs(100);
+
+    UART0_puts("\n\n=== Practica I2C: INA3221 + DS3231 ===\n");
+
+    while (!INA3221_check()) {
+        UART0_puts("INA3221 no responde en 0x40. Revisa SDA/SCL y pull-ups.\n");
+        delayMs(1000);
+    }
+
+    UART0_puts("INA3221 detectado. MANUF_ID = ");
+    UART0_puthex16(INA3221_readRegister(INA3221_REG_MANUFACTURER_ID));
+    UART0_puts("   DIE_ID = ");
+    UART0_puthex16(INA3221_readRegister(INA3221_REG_DIE_ID));
+    UART0_puts("\n");
+
+    INA3221_init();
+
+    UART0_puts("CONFIG = ");
+    UART0_puthex16(INA3221_readRegister(INA3221_REG_CONFIG));
+    UART0_puts("   Rshunt = ");
+    UART0_putn(R_SHUNT_mOHM);
+    UART0_puts(" mOhm\n");
+
+    while (!DS3231_check()) {
+        UART0_puts("DS3231 no responde en 0x68. Revisa SDA/SCL y pull-ups.\n");
+        delayMs(1000);
+    }
+    UART0_puts("DS3231 detectado.\n");
+
+    DS3231_init();
+
+    if (DS3231_lost_power()) {
+        UART0_puts("AVISO: el DS3231 perdio la hora (OSF activo). Cargando hora por defecto.\n");
+        DS3231_set_time(&HORA_POR_DEFECTO);
+        DS3231_clear_osf();
+    }
+
+    for (;;) {
+        UART0_puts("\n");
+        if (DS3231_get_time(&hora) == ERR_NONE) {
+            imprimirHora(&hora);
+        } else {
+            UART0_puts("RTC: error de lectura");
+        }
+        if (DS3231_get_temp_c100(&temp) == ERR_NONE) {
+            UART0_puts("    Temp = ");
+            imprimirTemp(temp);
+        }
+        UART0_puts("\n");
+
+        imprimirCabecera();
+
+        INA3221_read_channel(CANAL_INA, &canal);
+        imprimirCanal(CANAL_INA, &canal);
+
+        delayMs(1000);
+    }
+}
