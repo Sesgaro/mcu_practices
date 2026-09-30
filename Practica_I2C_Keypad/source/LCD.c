@@ -18,13 +18,30 @@
 static uint8_t lcd_addr = LCD_ADDR_A;
 static uint8_t lcd_bl   = PIN_BL;
 
+/* Base de tiempos en TPM0, no en SysTick: la aplicacion necesita el SysTick
+ * libre para su tick de 1 ms. Prescaler /16 -> 1 cuenta = 0.763 us. */
+static void lcd_timer_init(void)
+{
+    SIM->SCGC6 |= SIM_SCGC6_TPM0_MASK;
+    SIM->SOPT2  = (SIM->SOPT2 & ~0x03000000u) | 0x01000000u;
+
+    TPM0->SC  = 0;
+    TPM0->CNT = 0;
+    TPM0->MOD = 0xFFFFu;
+    TPM0->SC  = 0x08u | 0x04u;
+}
+
 static void lcd_delay_us(uint32_t us)
 {
-    SysTick->LOAD = (us * (LCD_CPU_HZ / 1000000u)) - 1u;
-    SysTick->VAL  = 0;
-    SysTick->CTRL = 0x5;
-    while ((SysTick->CTRL & 0x10000) == 0) { }
-    SysTick->CTRL = 0;
+    uint32_t ticks = ((us * 131u) / 100u) + 1u;
+
+    while (ticks > 0u) {
+        uint16_t chunk = (ticks > 0x8000u) ? 0x8000u : (uint16_t)ticks;
+        uint16_t t0    = (uint16_t)TPM0->CNT;
+
+        while ((uint16_t)((uint16_t)TPM0->CNT - t0) < chunk) { }
+        ticks -= chunk;
+    }
 }
 
 static void lcd_write4(uint8_t nibble, uint8_t rs)
@@ -72,6 +89,7 @@ uint8_t LCD_address(void)
 
 void LCD_init(void)
 {
+    lcd_timer_init();
     lcd_delay_us(50000);
     lcd_write4(0x03u, 0);  lcd_delay_us(4500);
     lcd_write4(0x03u, 0);  lcd_delay_us(4500);

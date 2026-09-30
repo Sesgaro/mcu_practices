@@ -122,14 +122,9 @@ static void mostrarEnLCD(const RTC_Time_t *t)
     LCD_puts(l1);
 }
 
-static void rgb_botones_init(void)
+static void rgb_init(void)
 {
-    SIM->SCGC5 |= SIM_SCGC5_PORTA_MASK | SIM_SCGC5_PORTB_MASK;
-
-    /* Botones */
-    PORTA->PCR[1] = 0x103;
-    PORTA->PCR[2] = 0x103;
-    PTA->PDDR &= ~((1u << 1) | (1u << 2));
+    SIM->SCGC5 |= SIM_SCGC5_PORTB_MASK;
 
     /* LED RGB */
     PORTB->PCR[18] = 0x100;
@@ -217,7 +212,7 @@ int main(void)
     I2C1_init();
     SPI0_init();
     Keypad_init();
-    rgb_botones_init();
+    rgb_init();
 
     delayMs(100);
 

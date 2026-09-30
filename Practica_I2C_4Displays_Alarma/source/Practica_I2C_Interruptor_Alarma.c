@@ -6,10 +6,12 @@
 #include "LCD.h"
 #include "SPI.h"
 #include "MAX7219.h"
+#include "Keypad.h"
+#include "Buzzer.h"
+#include "Melody.h"
 
 const unsigned int CLK_HZ = 20970000;
 
-#define BUZZER_PIN (1U << 0)
 
 static const RTC_Time_t HORA_POR_DEFECTO = {
     0, 36, 22,      	// segundos, minutos, horas
@@ -117,16 +119,6 @@ static void mostrarEnLCD(const RTC_Time_t *t)
     LCD_puts(l1);
 }
 
-static void BUZZER_init(void) {
-    SIM->SCGC5 |= SIM_SCGC5_PORTC_MASK;
-    PORTC->PCR[0] = PORT_PCR_MUX(1);
-    PTC->PDDR |= BUZZER_PIN;
-    PTC->PCOR = BUZZER_PIN;
-}
-
-static void BUZZER_on(void)  { PTC->PSOR = BUZZER_PIN; }
-static void BUZZER_off(void) { PTC->PCOR = BUZZER_PIN; }
-
 typedef struct {
     uint8_t minutes;
     uint8_t seconds;
@@ -148,7 +140,7 @@ static void configurarAlarmaKeypad(void)
     LCD_puts("MM:SS -> --:--");
 
     while (idx < 4) {
-        key = keypad_getKey();
+        key = Keypad_scan();
 
         if (key >= '0' && key <= '9') {
             digitos[idx] = key;
@@ -172,7 +164,7 @@ static void configurarAlarmaKeypad(void)
 
     LCD_setCursor(0, 0);
     LCD_puts("presiona * para guardar ");
-    while (keypad_getKey() != '*') {
+    while (Keypad_scan() != '*') {
         delayMs(100);
     }
 
@@ -201,12 +193,14 @@ int main(void)
 {
     RTC_Time_t hora;
     uint8_t sonando = 0;
+    int tick_20ms = 0;
+    int tick_200ms = 0;
 
     UART0_init();
     I2C1_init();
     SPI0_init();
     BUZZER_init();
-    keypad_init();
+    Keypad_init();
 
     delayMs(100);
 
@@ -243,41 +237,57 @@ int main(void)
 
     configurarAlarmaKeypad();
 
+    SysTick->LOAD = 20970 - 1;
+    SysTick->VAL  = 0;
+    SysTick->CTRL = 5;
+
     for (;;) {
-        if (DS3231_get_time(&hora) == ERR_NONE) {
-
-            if (alarma.activa && (hora.minutes == alarma.minutes) && (hora.seconds == alarma.seconds)) {
-                sonando = 1;
-            }
-
-            if (sonando) {
-                BUZZER_on();
-                LCD_setCursor(0, 0);
-                LCD_puts("*** alarma ***  ");
-                LCD_setCursor(0, 1);
-                LCD_puts("# para detener  ");
-            } else {
-                mostrarEnLCD(&hora);
-            }
-
-            MAX7219_showTime(hora.hours, hora.minutes);
-        } else {
-            LCD_setCursor(0, 0);
-            LCD_puts("Error lectura   ");
-            LCD_setCursor(0, 1);
-            LCD_puts("RTC             ");
+        if (!(SysTick->CTRL & 0x10000)) {
+            continue;
         }
 
-        if (sonando) {
-            char tecla = keypad_getKey();
-            if (tecla == '#') {
-                BUZZER_off();
+        Melody_tick();
+
+        tick_20ms++;
+        if (tick_20ms >= 20) {
+            tick_20ms = 0;
+
+            if (sonando && Keypad_scan() == '#') {
+                Melody_stop();
                 sonando = 0;
                 alarma.activa = 0;
                 LCD_clear();
             }
         }
 
-        delayMs(200);
+        tick_200ms++;
+        if (tick_200ms >= 200) {
+            tick_200ms = 0;
+
+            if (DS3231_get_time(&hora) == ERR_NONE) {
+
+                if (alarma.activa && !sonando &&
+                    (hora.minutes == alarma.minutes) && (hora.seconds == alarma.seconds)) {
+                    sonando = 1;
+                    Melody_start(MELODIA_LAVADORA, MELODIA_LAVADORA_N, 1);
+
+                    LCD_setCursor(0, 0);
+                    LCD_puts("*** alarma ***  ");
+                    LCD_setCursor(0, 1);
+                    LCD_puts("# para detener  ");
+                }
+
+                if (!sonando) {
+                    mostrarEnLCD(&hora);
+                }
+
+                MAX7219_showTime(hora.hours, hora.minutes);
+            } else {
+                LCD_setCursor(0, 0);
+                LCD_puts("Error lectura   ");
+                LCD_setCursor(0, 1);
+                LCD_puts("RTC             ");
+            }
+        }
     }
 }
